@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Nairobi County", "region": "Nairobi" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[36.7, -1.3],[36.9,-1.3],[36.9,-1.1],[36.7,-1.1],[36.7,-1.3]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Kisumu County", "region": "Nyanza" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[34.7, -0.1],[34.9,-0.1],[34.9,0.1],[34.7,0.1],[34.7,-0.1]]]
+      }
+    }
+  ]
+}
