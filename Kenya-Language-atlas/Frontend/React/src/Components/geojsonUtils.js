@@ -1,4 +1,4 @@
-export function attachCountyLayerHandlers(layer, { popupContent, onSelect, hoverStyle, defaultStyle }) {
+export function attachCountyLayerHandlers(layer, { popupContent, onSelect, hoverStyle, defaultStyle, afterMouseOut }) {
   if (!layer || typeof layer.bindPopup !== 'function') return;
 
   layer.bindPopup(popupContent);
@@ -14,6 +14,7 @@ export function attachCountyLayerHandlers(layer, { popupContent, onSelect, hover
 
     layer.on('mouseout', function () {
       styleLayer.setStyle(defaultStyle);
+      afterMouseOut?.(styleLayer);
       this.closePopup();
     });
   } else {

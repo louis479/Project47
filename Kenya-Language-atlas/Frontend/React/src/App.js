@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import CountyMap from './Components/CountyMap';
+import './App.css';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:8000';
 
 function App() {
   const [overview, setOverview] = useState(null);
-  const [regions, setRegions] = useState([]);
-  const [languages, setLanguages] = useState([]);
   const [counties, setCounties] = useState([]);
   const [selectedCounty, setSelectedCounty] = useState(null);
   const [view, setView] = useState('map');
@@ -15,14 +14,6 @@ function App() {
     fetch(`${API_BASE}/api/kenya-overview/`)
       .then((res) => res.json())
       .then((data) => setOverview(data));
-
-    fetch(`${API_BASE}/api/regions/`)
-      .then((res) => res.json())
-      .then((data) => setRegions(data));
-
-    fetch(`${API_BASE}/api/languages/`)
-      .then((res) => res.json())
-      .then((data) => setLanguages(data));
 
     fetch(`${API_BASE}/api/counties/`)
       .then((res) => res.json())
@@ -49,110 +40,195 @@ function App() {
     return () => window.removeEventListener('popstate', syncViewFromLocation);
   }, [counties]);
 
-  const handleCountySelect = (county) => {
+  const handleCountySelect = useCallback((county) => {
     setSelectedCounty(county);
+  }, []);
+
+  const handleViewProfile = useCallback(() => {
+    if (!selectedCounty) return;
     setView('detail');
-    const nextPath = `/county/${county.id}`;
+    const nextPath = `/county/${selectedCounty.id}`;
     if (window.history.pushState) {
       window.history.pushState({}, '', nextPath);
     }
-  };
+  }, [selectedCounty]);
 
-  const handleBackToMap = () => {
+  const handleBackToMap = useCallback(() => {
     setView('map');
     setSelectedCounty(null);
     if (window.history.pushState) {
       window.history.pushState({}, '', '/');
     }
-  };
+  }, []);
+
+  const selectedLanguages = (selectedCounty?.languages || []).join(', ');
 
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', padding: '2rem', maxWidth: '960px', margin: 'auto' }}>
-      <h1>Kenya Language Atlas</h1>
-      <p>A simple prototype showing Kenya’s language and regional diversity.</p>
+    <div className="atlas-shell">
+      <header className="atlas-header">
+        <div className="brand">
+          <div className="brand-mark" aria-hidden="true">KA</div>
+          <h1>Kenya Language Atlas</h1>
+        </div>
+
+        <nav className="atlas-nav" aria-label="Primary navigation">
+          <a className="nav-link is-active" href="/" onClick={(event) => { event.preventDefault(); handleBackToMap(); }}>
+            <span className="nav-home-icon" aria-hidden="true"></span>
+            Home
+          </a>
+          <a className="nav-link" href="#languages">Languages</a>
+          <a className="nav-link" href="#about">About</a>
+          <a className="nav-link" href="#methodology">Methodology</a>
+          <a className="nav-link" href="#contact">Contact</a>
+        </nav>
+      </header>
 
       {view === 'detail' && selectedCounty ? (
-        <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '1.25rem', background: '#fafafa' }}>
-          <button onClick={handleBackToMap} style={{ marginBottom: '1rem', padding: '0.5rem 0.8rem', borderRadius: '6px', border: '1px solid #2c7bb6', background: 'white', cursor: 'pointer' }}>
-            ← Back to the map
-          </button>
-          <h2>{selectedCounty.name}</h2>
-          <p><strong>Region:</strong> {selectedCounty.region}</p>
-          <p><strong>Population:</strong> {selectedCounty.population}</p>
-          <p><strong>Languages:</strong> {(selectedCounty.languages || []).join(', ')}</p>
+        <main className="detail-page">
+          <article className="detail-card">
+            <div className="detail-hero">
+              <button className="back-button" onClick={handleBackToMap}>Back to the map</button>
+              <h2>{selectedCounty.name}</h2>
+              <p>{selectedCounty.history || 'History details will be added as the atlas grows.'}</p>
+            </div>
 
-          {selectedCounty.image_url && (
-            <img src={selectedCounty.image_url} alt={selectedCounty.name} style={{ width: '100%', maxHeight: '280px', objectFit: 'cover', borderRadius: '8px', margin: '1rem 0' }} />
-          )}
+            {selectedCounty.image_url && (
+              <img className="detail-image" src={selectedCounty.image_url} alt={selectedCounty.name} />
+            )}
 
-          <h3>History</h3>
-          <p>{selectedCounty.history || 'History details will be added as the atlas grows.'}</p>
+            <div className="detail-grid">
+              <div className="detail-stat">
+                <strong>Region</strong>
+                <span>{selectedCounty.region || 'Unknown'}</span>
+              </div>
+              <div className="detail-stat">
+                <strong>Population</strong>
+                <span>{selectedCounty.population || 'Not available'}</span>
+              </div>
+              <div className="detail-stat">
+                <strong>Languages</strong>
+                <span>{selectedLanguages || 'Not available'}</span>
+              </div>
+            </div>
 
-          <h3>Tribes and communities</h3>
-          <p>{selectedCounty.tribes || 'Community details will be added as the atlas grows.'}</p>
-
-          <h3>Language profile</h3>
-          <p>{selectedCounty.language_details || 'Language notes will be added as the atlas grows.'}</p>
-        </div>
+            <div className="detail-body">
+              <section>
+                <h3>Tribes and communities</h3>
+                <p>{selectedCounty.tribes || 'Community details will be added as the atlas grows.'}</p>
+              </section>
+              <section>
+                <h3>Language profile</h3>
+                <p>{selectedCounty.language_details || 'Language notes will be added as the atlas grows.'}</p>
+              </section>
+            </div>
+          </article>
+        </main>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1rem' }}>
-          <div>
-            <CountyMap onSelectCounty={handleCountySelect} />
-          </div>
-          <div>
-            <div id="county-info" style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '6px' }}>
-              <h3>Selected County</h3>
-              {selectedCounty ? (
+        <main className="atlas-main">
+          <div className="atlas-layout">
+            <section className="map-panel" aria-label="Kenya county language map">
+              <CountyMap onSelectCounty={handleCountySelect} selectedCounty={selectedCounty} />
+            </section>
+
+            <aside className="sidebar">
+              <section className="info-card">
+                <div className="card-icon pin-icon" aria-hidden="true"></div>
                 <div>
-                  <p><strong>{selectedCounty.name}</strong></p>
-                  <p><strong>Region:</strong> {selectedCounty.region}</p>
-                  <p><strong>Languages:</strong> {(selectedCounty.languages || []).join(', ')}</p>
+                  <h2>Selected Province</h2>
+                  {selectedCounty ? (
+                    <>
+                      <ul className="county-stats">
+                        <li>
+                          <strong className="county-name">{selectedCounty.name}</strong>
+                          <span>{selectedCounty.region || 'Region details are not available yet.'}</span>
+                        </li>
+                        <li>
+                          <strong>Languages</strong>
+                          <span>{selectedLanguages || 'Language data is not available yet.'}</span>
+                        </li>
+                        <li>
+                          <strong>Population</strong>
+                          <span>{selectedCounty.population || 'Population data is not available yet.'}</span>
+                        </li>
+                      </ul>
+                      <button className="profile-button" onClick={handleViewProfile}>View full profile</button>
+                    </>
+                  ) : (
+                    <p>Click on a province on the map to see its cultural and linguistic profile.</p>
+                  )}
                 </div>
-              ) : (
-                <div>Click a county on the map to see its cultural and linguistic profile.</div>
-              )}
-            </div>
-            <div style={{ marginTop: '1rem', border: '1px solid #ddd', padding: '0.5rem', borderRadius: '6px' }}>
-              <h4>Legend</h4>
-              <div style={{ display: 'flex', alignItems: 'center' }}><div style={{ width: 16, height: 12, background: '#2c7bb6', marginRight: 8 }}></div> County area</div>
-            </div>
+              </section>
+
+              <section className="info-card">
+                <div aria-hidden="true"></div>
+                <div>
+                  <h3>Legend</h3>
+                  <ul className="legend-list">
+                    <li className="legend-item">
+                      <span className="boundary-key" aria-hidden="true"></span>
+                      <span>Province Boundary</span>
+                    </li>
+                    <li className="legend-item">
+                      <span className="water-key" aria-hidden="true"></span>
+                      <span>Water Body</span>
+                    </li>
+                  </ul>
+                </div>
+              </section>
+
+              <section className="info-card" id="methodology">
+                <div aria-hidden="true"></div>
+                <div>
+                  <h3>How to use</h3>
+                  <ul className="steps-list">
+                    <li className="step-item">
+                      <span className="tool-icon cursor-icon" aria-hidden="true"></span>
+                      <span className="step-copy">
+                        <strong>Click on a province</strong>
+                        <span>Explore languages spoken in the province</span>
+                      </span>
+                    </li>
+                    <li className="step-item">
+                      <span className="tool-icon chart-icon" aria-hidden="true"></span>
+                      <span className="step-copy">
+                        <strong>View insights</strong>
+                        <span>See language statistics and diversity</span>
+                      </span>
+                    </li>
+                    <li className="step-item">
+                      <span className="tool-icon download-icon" aria-hidden="true"></span>
+                      <span className="step-copy">
+                        <strong>Share or download</strong>
+                        <span>Export data or share with others</span>
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              </section>
+
+              <section className="info-card about-card" id="about">
+                <div className="card-icon info-icon" aria-hidden="true">i</div>
+                <div>
+                  <h3>About the Atlas</h3>
+                  <p>
+                    {overview?.highlights ||
+                      "The Kenya Language Atlas is an open data initiative that visualizes the rich linguistic diversity across Kenya's provinces."}
+                  </p>
+                </div>
+              </section>
+            </aside>
           </div>
+        </main>
+      )}
+
+      <footer className="atlas-footer">
+        <div>
+          <span>&copy; 2025 Kenya Language Atlas</span>
+          <span className="footer-divider">|</span>
+          <span>Data sources: KNBS, Ethnologue, SIL Kenya</span>
         </div>
-      )}
-
-      {overview && (
-        <section style={{ marginBottom: '2rem', marginTop: '2rem' }}>
-          <h2>Kenya Overview</h2>
-          <p><strong>Capital:</strong> {overview.capital}</p>
-          <p><strong>Population:</strong> {overview.population}</p>
-          <p><strong>Languages:</strong> {overview.languages.join(', ')}</p>
-          <p>{overview.highlights}</p>
-        </section>
-      )}
-
-      <section style={{ marginBottom: '2rem' }}>
-        <h2>Sample Regions</h2>
-        {regions.map((region) => (
-          <div key={region.id} style={{ border: '1px solid #ddd', padding: '1rem', marginBottom: '0.8rem' }}>
-            <h3>{region.name}</h3>
-            <p>{region.description}</p>
-            <p><strong>Population:</strong> {region.population}</p>
-            <p><strong>Languages:</strong> {region.languages}</p>
-          </div>
-        ))}
-      </section>
-
-      <section>
-        <h2>Sample Languages</h2>
-        {languages.map((language) => (
-          <div key={language.id} style={{ border: '1px solid #ddd', padding: '1rem', marginBottom: '0.8rem' }}>
-            <h3>{language.name}</h3>
-            <p><strong>Family:</strong> {language.family}</p>
-            <p><strong>Speakers:</strong> {language.speakers}</p>
-            <p>{language.description}</p>
-          </div>
-        ))}
-      </section>
+        <div>Built with <span className="footer-heart">heart</span> for cultural preservation</div>
+      </footer>
     </div>
   );
 }
